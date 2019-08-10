@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         掘金文章黑名单
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/hoc2019/blackList
 // @version      1.0
-// @description  try to take over the world!
+// @description  掘金文章黑名单过滤脚本
 // @author       wangzy
 // @e-mail       sl2782087@163.com
 // @match        https://juejin.im/*

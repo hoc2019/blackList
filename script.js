@@ -15,13 +15,10 @@
         '.black-btn{height:36px;line-height:36px;text-align:center;color:#ccc}.black-btn.in-black{color:#000}.black-sidebar{position:fixed;width:240px;background:#2d303a;font-size: 16px;top:10%;border-radius:0 0 20px 0;padding:20px 20px 20px 0;z-index:999;transform:translate3d(-100%,0,0);transition:transform .4s ease-out}.black-sidebar-show{transform:translate3d(0,0,0)}.hide-icon{display:none}.black-sidebar-show .hide-icon{display:initial}.black-sidebar-show .show-icon{display:none}.toggle{width:50px;padding:5px;background:#2d303a;position:absolute;top:0;right:-60px;color:#fff;border-radius:0 10px 10px 0;cursor:pointer}.black-sidebar ul{height:80px;padding-left:0;overflow-y:auto;overflow-x:hidden;margin:10px 0}.black-sidebar p{padding-left:20px;color:#0ebeff}.black-sidebar ul::-webkit-scrollbar{width:5px;height:5px}.black-sidebar ul::-webkit-scrollbar-thumb{background:rgba(220,220,220,0.5);border-radius:5px}.black-sidebar ul::-webkit-scrollbar-track{background:#201c29}.black-sidebar li{width:80%;font-size:16px;line-height:26px;color:#fff;font-weight:bold;list-style:none;cursor:pointer;padding-left:50px;position:relative;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.black-sidebar li:hover{background:#000}.black-sidebar li:hover::after{content:"删除";position:absolute;left:10px;font-size:12px;color:#ffdd40}.input-box input{width:82%;border:1px solid rgba(220,220,220,0.4);color:#fff;font-size:16px;line-height:26px;border-radius:4px;background:#262830;margin:5px 0 5px 22px;padding:0 5px}.btn-box{text-align:center}.btn-box span{color:#47cf73;cursor:pointer;margin:0 15px}';
     GM_addStyle(myScriptStyle);
 
-    const authorBlackList = JSON.parse(
-        localStorage.getItem('authorBlackList') || '[]'
-    );
-    const keywordsBlackList = JSON.parse(
-        localStorage.getItem('keywordsBlackList') || '[]'
-    );
+    let authorBlackList = [];
+    let keywordsBlackList = [];
 
+    getBlackListFromLocalStorage();
     addBlackListSidebar();
 
     const pathname = location.pathname.split('/')[1];
@@ -31,6 +28,22 @@
         addBlackListBtn();
     }
 
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            updateSidebarList();
+            if (pathname === 'post') {
+                const author = getAuthor();
+                const isInBlack = authorBlackList.includes(author);
+                console.log(isInBlack);
+                if (isInBlack) {
+                    $('.panel-btn.black-btn').addClass('in-black');
+                } else {
+                    $('.panel-btn.black-btn').removeClass('in-black');
+                }
+            }
+        }
+    });
+
     function addBlackListSidebar() {
         const sidebarHtml =
             '<div class="black-sidebar"><div class="toggle">Black<br />List<span class="show-icon">></span><span class="hide-icon"><</span></div><div class="author"><p>作者</p><ul></ul></div><div class="keywords"><p>关键字</p><ul></ul></div><div class="input-box"><input type="text" /></div><div class="btn-box"><span data-type="author">+作者</span><span data-type="keywords">+关键字</span></div></div>';
@@ -38,14 +51,7 @@
         $('.toggle').click(function() {
             $('.black-sidebar').toggleClass('black-sidebar-show');
         });
-        const authorLi = authorBlackList.map(
-            item => `<li data-type="author">${item}<li>`
-        );
-        const keywordsLi = keywordsBlackList.map(
-            item => `<li data-type="keywords">${item}<li>`
-        );
-        $('.black-sidebar .author ul').append(authorLi);
-        $('.black-sidebar .keywords ul').append(keywordsLi);
+        updateSidebarList();
         $('.black-sidebar ul').on('click', 'li', function() {
             const item = $(this);
             blackAction('delete', item.data('type'), item.text());
@@ -59,6 +65,22 @@
             blackAction('add', item.data('type'), value);
             input.val('');
         });
+    }
+
+    function updateSidebarList() {
+        getBlackListFromLocalStorage();
+        const authorLi = authorBlackList.map(
+            item => `<li data-type="author">${item}<li>`
+        );
+        const keywordsLi = keywordsBlackList.map(
+            item => `<li data-type="keywords">${item}<li>`
+        );
+        $('.black-sidebar .author ul')
+            .empty()
+            .append(authorLi);
+        $('.black-sidebar .keywords ul')
+            .empty()
+            .append(keywordsLi);
     }
 
     function addBlackListBtn() {
@@ -137,11 +159,7 @@
                                 loadObserver.disconnect();
                                 const articles = $(`.${articleBox}>.item`);
                                 filter(articles);
-                                updateObserver = createNodeListener(
-                                    list[0],
-                                    config,
-                                    updateLoad
-                                );
+                                createNodeListener(list[0], config, updateLoad);
                             }
                         }
                         break;
@@ -166,7 +184,6 @@
             config,
             handleLoad
         );
-        let updateObserver;
         function filter(articles) {
             if (!(keywordsBlackList.length || authorBlackList.length)) return;
             articles.each(function() {
@@ -183,6 +200,15 @@
             if (!keywordsBlackList.length) return false;
             return titleRegex.test(title);
         }
+    }
+
+    function getBlackListFromLocalStorage() {
+        authorBlackList = JSON.parse(
+            localStorage.getItem('authorBlackList') || '[]'
+        );
+        keywordsBlackList = JSON.parse(
+            localStorage.getItem('keywordsBlackList') || '[]'
+        );
     }
 
     function blackAction(action, type, name, delIndex) {
